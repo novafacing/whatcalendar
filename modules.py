@@ -1,18 +1,17 @@
 import abc
-import pytz
-
-from googleapiclient.discovery import build
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from sortedcontainers import SortedDict
-
 from dataclasses import dataclass
-from json import loads
 from datetime import datetime
-from typing import Dict, Any, List, Optional
+from json import loads
 from pathlib import Path
 from pprint import pprint
+from typing import Any, Dict, List, Optional
+
+import pytz
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from sortedcontainers import SortedDict
 
 from entry import Entry
 
@@ -47,52 +46,54 @@ class GoogleCalendarProperties:
     flow: InstalledAppFlow
     calendar_ids: List[str]
 
+
 @dataclass
 class GoogleCalendarEvent:
-  kind: Optional[Any] = None
-  etag: Optional[Any] = None
-  id: Optional[str] = None
-  status: Optional[str] = None
-  htmlLink: Optional[str] = None
-  created: Optional[datetime] = None
-  updated: Optional[datetime] = None
-  summary: Optional[str] = None
-  description: Optional[str] = None
-  location: Optional[str] = None
-  colorId: Optional[str] = None
-  creator: Optional[Dict] = None
-  organizer: Optional[Dict] = None
-  start: Optional[Dict] = None
-  end: Optional[Dict] = None
-  endTimeUnspecified: Optional[bool] = None
-  recurrence: Optional[List] = None
-  recurringEventId: Optional[str] = None
-  originalStartTime: Optional[Dict] = None
-  transparency: Optional[str] = None
-  visibility: Optional[str] = None
-  iCalUID: Optional[str] = None
-  sequence: Optional[Any] = None
-  attendees: Optional[List] = None
-  attendeesOmitted: Optional[bool] = None
-  extendedProperties: Optional[Dict] = None
-  hangoutLink: Optional[str] = None
-  conferenceData: Optional[Dict] = None
-  gadget: Optional[Dict] = None
-  anyoneCanAddSelf: Optional[bool] = None
-  guestsCanInviteOthers: Optional[bool] = None
-  guestsCanModify: Optional[bool] = None
-  guestsCanSeeOtherGuests: Optional[bool] = None
-  privateCopy: Optional[bool] = None
-  locked: Optional[bool] = None
-  reminders: Optional[Dict] = None
-  source: Optional[Dict] = None
-  attachments: Optional[List] = None
-  eventType: Optional[str] = None
+    kind: Optional[Any] = None
+    etag: Optional[Any] = None
+    id: Optional[str] = None
+    status: Optional[str] = None
+    htmlLink: Optional[str] = None
+    created: Optional[datetime] = None
+    updated: Optional[datetime] = None
+    summary: Optional[str] = None
+    description: Optional[str] = None
+    location: Optional[str] = None
+    colorId: Optional[str] = None
+    creator: Optional[Dict] = None
+    organizer: Optional[Dict] = None
+    start: Optional[Dict] = None
+    end: Optional[Dict] = None
+    endTimeUnspecified: Optional[bool] = None
+    recurrence: Optional[List] = None
+    recurringEventId: Optional[str] = None
+    originalStartTime: Optional[Dict] = None
+    transparency: Optional[str] = None
+    visibility: Optional[str] = None
+    iCalUID: Optional[str] = None
+    sequence: Optional[Any] = None
+    attendees: Optional[List] = None
+    attendeesOmitted: Optional[bool] = None
+    extendedProperties: Optional[Dict] = None
+    hangoutLink: Optional[str] = None
+    conferenceData: Optional[Dict] = None
+    gadget: Optional[Dict] = None
+    anyoneCanAddSelf: Optional[bool] = None
+    guestsCanInviteOthers: Optional[bool] = None
+    guestsCanModify: Optional[bool] = None
+    guestsCanSeeOtherGuests: Optional[bool] = None
+    privateCopy: Optional[bool] = None
+    locked: Optional[bool] = None
+    reminders: Optional[Dict] = None
+    source: Optional[Dict] = None
+    attachments: Optional[List] = None
+    eventType: Optional[str] = None
+
 
 class GoogleCalendarModule(EntryModule):
     def __init__(self) -> None:
         self.scopes = ["https://www.googleapis.com/auth/calendar.readonly"]
-        self.interval = 180 # Once every other minute is more than enough
+        self.interval = 180  # Once every other minute is more than enough
         self.last = datetime.now()
         self.data: Optional[SortedDict] = None
 
@@ -154,7 +155,7 @@ class GoogleCalendarModule(EntryModule):
                     ),
                     token_file=(Path(__file__).parent / rel_tok_path).resolve(),
                     flow=InstalledAppFlow.from_client_secrets_file(
-                        Path(__file__).parent / app_credentials_file, self.scopes 
+                        Path(__file__).parent / app_credentials_file, self.scopes
                     ),
                     calendar_ids=ids[token_name],
                 )

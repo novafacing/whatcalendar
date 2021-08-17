@@ -1,0 +1,4 @@
+__pycache__
+config/config.json
+config/credentials.json
+config/personal_token.json

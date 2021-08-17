@@ -1,19 +1,20 @@
-from json import loads, dumps
-
-from inky import InkyWHAT
-from PIL import Image, ImageFont, ImageDraw
-from font_source_serif_pro import SourceSerifProSemibold
-from pathlib import Path
-from modules import EntryModule, GoogleCalendarModule
-from entry import Entry
-from typing import Dict, Any, List
-from sortedcontainers import SortedDict
-from time import sleep
-from json import loads
 from datetime import datetime
+from json import dumps, loads
+from pathlib import Path
+from time import sleep
+from typing import Any, Dict, List
+
+from font_source_serif_pro import SourceSerifProSemibold
+from inky import InkyWHAT
+from PIL import Image, ImageDraw, ImageFont
 from pytz import UTC
+from sortedcontainers import SortedDict
+
+from entry import Entry
+from modules import EntryModule, GoogleCalendarModule
 
 FONT_PATH = Path(__file__).parent / "fonts" / "FiraCode-Regular.ttf"
+
 
 class DisplayManager:
     def __init__(
@@ -35,7 +36,9 @@ class DisplayManager:
         self.modules: List[EntryModule] = list(map(lambda m: m(), modules))
         self.spacing = 2
         self.adjustment = 3
-        self.per_page = (self.display.HEIGHT // self.font.getsize("ABCD ")[1] + self.spacing) - self.adjustment
+        self.per_page = (
+            self.display.HEIGHT // self.font.getsize("ABCD ")[1] + self.spacing
+        ) - self.adjustment
 
     def setup(self) -> None:
         for module in self.modules:
@@ -46,7 +49,9 @@ class DisplayManager:
         for entry in sublist:
             initial = " "
 
-            if (entry.time - datetime.now().replace(tzinfo=UTC)).total_seconds() <= 3600:
+            if (
+                entry.time - datetime.now().replace(tzinfo=UTC)
+            ).total_seconds() <= 3600:
                 initial = "!"
 
             timestr = entry.time.strftime("%m/%d %H:%M")
@@ -68,7 +73,7 @@ class DisplayManager:
             fill=self.display.BLACK,
             font=self.font,
             align="left",
-            spacing=self.spacing
+            spacing=self.spacing,
         )
         self.display.set_image(self.img)
         self.display.show()
@@ -86,8 +91,10 @@ class DisplayManager:
                 for i in range(pages + 1)
             ]
             for page_range in page_ranges:
-                self.show(events_list[page_range[0]:page_range[1]])
-                self.draw.rectangle([0, 0, 400, 400], fill=self.display.WHITE, outline=None, width=0)
+                self.show(events_list[page_range[0] : page_range[1]])
+                self.draw.rectangle(
+                    [0, 0, 400, 400], fill=self.display.WHITE, outline=None, width=0
+                )
                 sleep(self.config["settings"]["page-time"])
 
     def refresh(self) -> List[Entry]:
@@ -115,5 +122,7 @@ class DisplayManager:
 
 if __name__ == "__main__":
     config = loads((Path(__file__).parent / "config" / "config.json").open("r").read())
-    dm = DisplayManager(config=config, font_path=FONT_PATH, interval=30, modules=[GoogleCalendarModule])
+    dm = DisplayManager(
+        config=config, font_path=FONT_PATH, interval=30, modules=[GoogleCalendarModule]
+    )
     dm.run()
