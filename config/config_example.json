@@ -1,0 +1,22 @@
+{
+	"modules": {
+		"calendar": {
+			"tokens": {
+				"Personal": "config/YOUR_PERSONAL_TOKEN.json"
+			},
+			"credentials": "config/credentials.json",
+			"ids": {
+				"Personal": [
+					"YOUR_CALENDAR_ID1",
+					"YOUR_CALENDAR_ID2"
+				]
+			},
+			"blacklist": [
+				"some blacklist text"
+			]
+		}
+	},
+	"settings": {
+		"page-time": 30
+	}
+}

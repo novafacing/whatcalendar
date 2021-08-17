@@ -1,0 +1,10 @@
+isort
+pylint
+mypy
+black
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+sortedcontainers
+inky
+pillow
