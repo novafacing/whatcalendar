@@ -1,15 +1,15 @@
 from datetime import datetime
 from pathlib import Path
 from time import sleep
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 from inky import InkyWHAT
 from PIL import Image, ImageDraw, ImageFont
-from pytz import UTC
+from pytz import UTC 
 from sortedcontainers import SortedDict
 
-from entry import Entry
-from modules import EntryModule
+from whatcalendar.entry import Entry
+from whatcalendar.modules import EntryModule
 
 class DisplayManager:
     def __init__(
@@ -36,7 +36,7 @@ class DisplayManager:
         self.rows: List[Entry] = []
         self.modules: List[EntryModule] = list(map(lambda m: m(), modules))
         self.spacing = 2
-        self.adjustment = 3
+        self.adjustment = 4
         self.per_page = (
             self.display.HEIGHT // self.font.getsize("ABCD ")[1] + self.spacing
         ) - self.adjustment
@@ -72,14 +72,14 @@ class DisplayManager:
             assembled += asmtxt + "\n"
         return assembled
 
-    def show(self, sublist: List[Entry]) -> None:
+    def show(self, sublist: List[Entry], page: Tuple[int]) -> None:
         """
         Display the page on screen
         :param sublist: The list of entries to in the page.
         """
         self.draw.multiline_text(
             (0, 0),
-            self.assemble(sublist),
+            self.assemble(sublist) + f"{' ' * 8}Page {page[0] + 1}/{page[1]} *** {datetime.now().replace(tzinfo=UTC).strftime('%H:%M')}",
             fill=self.display.BLACK,
             font=self.font,
             align="left",
@@ -99,10 +99,11 @@ class DisplayManager:
                     i * self.per_page,
                     min((i * self.per_page) + self.per_page, len(events_list)),
                 )
-                for i in range(pages + 1)
+                for i in range(pages)
             ]
-            for page_range in page_ranges:
-                self.show(events_list[page_range[0] : page_range[1]])
+
+            for i, page_range in enumerate(page_ranges):
+                self.show(events_list[page_range[0] : page_range[1]], (i, len(page_ranges)))
                 self.draw.rectangle(
                     [0, 0, 400, 400], fill=self.display.WHITE, outline=None, width=0
                 )

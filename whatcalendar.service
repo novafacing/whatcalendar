@@ -6,8 +6,8 @@ After=network.target
 type=simple
 Restart=on-failure
 RestartSec=30
-ExecStart=/usr/bin/python3 display.py
-WorkingDirectory=/home/YOUR_USER/display/
+ExecStart=/usr/bin/python3 -m whatcalendar
+WorkingDirectory=/home/YOUR_USER/whatcalendar/
 
 [Install]
 WantedBy=multi-user.target

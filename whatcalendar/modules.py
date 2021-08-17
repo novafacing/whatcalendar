@@ -13,7 +13,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from sortedcontainers import SortedDict
 
-from entry import Entry
+from whatcalendar.entry import Entry
 
 
 class EntryModule(metaclass=abc.ABCMeta):
@@ -162,14 +162,14 @@ class GoogleCalendarModule(EntryModule):
                 GoogleCalendarProperties(
                     token_identifier=token_name,
                     token=GoogleCalendarToken(
-                        **loads((Path(__file__).parent[1] / rel_tok_path).open("r").read())
+                        **loads((Path(__file__).parents[1] / rel_tok_path).open("r").read())
                     ),
                     creds=Credentials.from_authorized_user_file(
-                        Path(__file__).parent / rel_tok_path
+                        Path(__file__).parents[1] / rel_tok_path
                     ),
-                    token_file=(Path(__file__).parent[1] / rel_tok_path).resolve(),
+                    token_file=(Path(__file__).parents[1] / rel_tok_path).resolve(),
                     flow=InstalledAppFlow.from_client_secrets_file(
-                        Path(__file__).parent[1] / app_credentials_file, self.scopes
+                        Path(__file__).parents[1] / app_credentials_file, self.scopes
                     ),
                     calendar_ids=ids[token_name],
                 )
