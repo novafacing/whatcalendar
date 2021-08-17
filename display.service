@@ -1,0 +1,13 @@
+[Unit]
+Description=Display
+After=network.target
+
+[Service]
+type=simple
+Restart=on-failure
+RestartSec=30
+ExecStart=/usr/bin/python3 display.py
+WorkingDirectory=/home/YOUR_USER/display/
+
+[Install]
+WantedBy=multi-user.target
