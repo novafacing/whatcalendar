@@ -17,6 +17,7 @@
 		}
 	},
 	"settings": {
-		"page-time": 30
+		"page-time": 30,
+		"font-path": "fonts/FiraCode-Regular.ttf"
 	}
 }
