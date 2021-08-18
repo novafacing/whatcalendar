@@ -44,7 +44,7 @@ class DisplayManager:
     def setup(self) -> None:
         """Run module setup methods"""
         for module in self.modules:
-            module.setup(self.config["modules"])
+            module.setup(self.config)
 
     def assemble(self, sublist: List[Entry]) -> None:
         """

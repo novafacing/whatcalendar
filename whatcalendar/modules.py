@@ -1,12 +1,13 @@
 import abc
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta, date, time
 from json import loads
 from pathlib import Path
 from pprint import pprint
 from typing import Any, Dict, List, Optional
 
 import pytz
+from pytz import timezone
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -111,13 +112,13 @@ class GoogleCalendarModule(EntryModule):
         for credential in self.credentials:
             service = build("calendar", "v3", credentials=credential.creds)
             for calendar_id in credential.calendar_ids:
-                now = datetime.utcnow().isoformat() + "Z"
+                today_midnight = (datetime.combine(date.today(), time())).isoformat() + "Z"
                 events_result = (
                     service.events()
                     .list(
                         calendarId=calendar_id,
-                        timeMin=now,
-                        maxResults=16,
+                        timeMin=today_midnight,
+                        maxResults=24,
                         singleEvents=True,
                         orderBy="startTime",
                     )
@@ -130,16 +131,23 @@ class GoogleCalendarModule(EntryModule):
                     gcal_event = GoogleCalendarEvent(**event)
                     event_time = datetime.fromisoformat(
                         gcal_event.start.get("dateTime", gcal_event.start.get("date"))
-                    ).replace(tzinfo=pytz.UTC)
-                    if event_time not in all_events:
-                        all_events[event_time] = []
+                    ).replace(tzinfo=self.timezone)
+                    event_end_time = datetime.fromisoformat(
+                        gcal_event.end.get("dateTime", gcal_event.start.get("date"))
+                    ).replace(tzinfo=self.timezone)
                     for item in self.blacklist:
                         if item in gcal_event.summary:
                             break
                     else:
-                        all_events[event_time].append(
-                            Entry(todo=False, label=gcal_event.summary, time=event_time)
-                        )
+                        now = datetime.now().replace(tzinfo=self.timezone)
+                        print(f"Now: {now} Event_Time: {event_time} Event_end_time: {event_end_time}")
+                        if event_time > now or (event_time <= now and event_end_time > now):
+                            print(f"Adding. {gcal_event.summary}")
+                            if event_time not in all_events:
+                                all_events[event_time] = []
+                            all_events[event_time].append(
+                                Entry(todo=False, label=gcal_event.summary, time=event_time)
+                            )
         self.data = all_events
 
     def setup(self, config: Dict) -> None:
@@ -149,13 +157,15 @@ class GoogleCalendarModule(EntryModule):
         :param config: Configuration dictionary
         """
         self.credentials: List[GoogleCalendarProperties] = []
-        if "calendar" not in config:
+        if "modules" not in config or "calendar" not in config["modules"]:
             raise AssertionError("No 'calendar' section in config!")
 
-        tokens = config["calendar"]["tokens"]
-        app_credentials_file = config["calendar"]["credentials"]
-        ids = config["calendar"]["ids"]
-        self.blacklist = config["calendar"]["blacklist"]
+        self.timezone = timezone(config["settings"]["time-zone"])
+        config = config["modules"]["calendar"]
+        tokens = config["tokens"]
+        app_credentials_file = config["credentials"]
+        ids = config["ids"]
+        self.blacklist = config["blacklist"]
 
         for token_name, rel_tok_path in tokens.items():
             self.credentials.append(
