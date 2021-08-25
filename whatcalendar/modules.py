@@ -140,9 +140,7 @@ class GoogleCalendarModule(EntryModule):
                             break
                     else:
                         now = datetime.now().replace(tzinfo=self.timezone)
-                        print(f"Now: {now} Event_Time: {event_time} Event_end_time: {event_end_time}")
                         if event_time > now or (event_time <= now and event_end_time > now):
-                            print(f"Adding. {gcal_event.summary}")
                             if event_time not in all_events:
                                 all_events[event_time] = []
                             all_events[event_time].append(

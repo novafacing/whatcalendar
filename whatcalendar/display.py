@@ -88,7 +88,7 @@ class DisplayManager:
         self.display.set_image(self.img)
         self.display.show()
 
-    def run(self) -> None:
+    def run(self, paginate: bool=True) -> None:
         """Main loop, perform setup and start paginating."""
         self.setup()
         while True:
@@ -108,6 +108,8 @@ class DisplayManager:
                     [0, 0, 400, 400], fill=self.display.WHITE, outline=None, width=0
                 )
                 sleep(self.config["settings"]["page-time"])
+                if not paginate:
+                    break
 
     def refresh(self) -> List[Entry]:
         """Refresh modules that need a refresh."""
