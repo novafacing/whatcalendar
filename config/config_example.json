@@ -19,6 +19,7 @@
 	"settings": {
 		"page-time": 30,
 		"font-path": "fonts/FiraCode-Regular.ttf",
-		"time-zone": "US/Eastern"
+		"time-zone": "US/Eastern",
+		"token-refresh": 3600
 	}
 }

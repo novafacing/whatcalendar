@@ -147,6 +147,15 @@ class GoogleCalendarModule(EntryModule):
                                 Entry(todo=False, label=gcal_event.summary, time=event_time)
                             )
         self.data = all_events
+        if (datetime.now().replace(tzinfo=self.timezone) - self.last_token_refresh).total_seconds() > self.config["settings"]["token-refresh"]:
+            for token_name, rel_tok_path in self.tokens.items():
+                token_path = Path(__file__).parents[1] / rel_tok_path
+                creds_path = Path(__file__).parents[1] / app_credentials_file
+                if token_path.exists():
+                    creds = Credentials.from_authorized_user_file("config/personal_token.json")
+                
+                    if creds is not None and creds.expired and creds.refresh_token:
+                        creds.refresh(Request())
 
     def setup(self, config: Dict) -> None:
         """
@@ -154,18 +163,20 @@ class GoogleCalendarModule(EntryModule):
 
         :param config: Configuration dictionary
         """
+        self.config = config
         self.credentials: List[GoogleCalendarProperties] = []
         if "modules" not in config or "calendar" not in config["modules"]:
             raise AssertionError("No 'calendar' section in config!")
 
         self.timezone = timezone(config["settings"]["time-zone"])
+        self.last_token_refresh = datetime.now().replace(tzinfo=self.timezone)
         config = config["modules"]["calendar"]
-        tokens = config["tokens"]
+        self.tokens = config["tokens"]
         app_credentials_file = config["credentials"]
         ids = config["ids"]
         self.blacklist = config["blacklist"]
 
-        for token_name, rel_tok_path in tokens.items():
+        for token_name, rel_tok_path in self.tokens.items():
             self.credentials.append(
                 GoogleCalendarProperties(
                     token_identifier=token_name,

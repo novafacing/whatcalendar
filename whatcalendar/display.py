@@ -5,8 +5,8 @@ from typing import Any, Dict, List, Tuple
 
 from inky import InkyWHAT
 from PIL import Image, ImageDraw, ImageFont
-from pytz import UTC 
 from sortedcontainers import SortedDict
+from pytz import timezone
 
 from whatcalendar.entry import Entry
 from whatcalendar.modules import EntryModule
@@ -28,6 +28,8 @@ class DisplayManager:
         self.font_size = 20  # Experimentally, this looks best.
         self.interval = interval
         self.config = config
+        self.timezone = timezone(config["settings"]["time-zone"])
+        self.last_token_refresh = datetime.now().replace(tzinfo=self.timezone)
         self.font = ImageFont.truetype(font_path.open("rb"), self.font_size)
         self.display = InkyWHAT("black")
         self.display.set_border(self.display.BLACK)
@@ -56,7 +58,7 @@ class DisplayManager:
             initial = " "
 
             if (
-                entry.time - datetime.now().replace(tzinfo=UTC)
+                entry.time - datetime.now().replace(tzinfo=self.timezone)
             ).total_seconds() <= 3600:
                 initial = "!"
 
@@ -79,7 +81,7 @@ class DisplayManager:
         """
         self.draw.multiline_text(
             (0, 0),
-            self.assemble(sublist) + f"{' ' * 8}Page {page[0] + 1}/{page[1]} *** {datetime.now().replace(tzinfo=UTC).strftime('%H:%M')}",
+            self.assemble(sublist) + f"{' ' * 8}Page {page[0] + 1}/{page[1]} *** {datetime.now().replace(tzinfo=self.timezone).strftime('%H:%M')}",
             fill=self.display.BLACK,
             font=self.font,
             align="left",
@@ -103,11 +105,12 @@ class DisplayManager:
             ]
 
             for i, page_range in enumerate(page_ranges):
-                self.show(events_list[page_range[0] : page_range[1]], (i, len(page_ranges)))
                 self.draw.rectangle(
                     [0, 0, 400, 400], fill=self.display.WHITE, outline=None, width=0
                 )
+                self.show(events_list[page_range[0] : page_range[1]], (i, len(page_ranges) if paginate else 1))
                 sleep(self.config["settings"]["page-time"])
+
                 if not paginate:
                     break
 
@@ -132,4 +135,5 @@ class DisplayManager:
             for event in events[time]:
                 events_list.append(event)
 
+        print(events_list)
         return events_list
