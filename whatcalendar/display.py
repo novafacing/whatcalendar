@@ -33,6 +33,7 @@ class DisplayManager:
         self.font = ImageFont.truetype(font_path.open("rb"), self.font_size)
         self.display = InkyWHAT("black")
         self.display.set_border(self.display.BLACK)
+        self.display.v_flip = True
         self.img = Image.new("P", (self.display.WIDTH, self.display.HEIGHT))
         self.draw = ImageDraw.Draw(self.img)
         self.rows: List[Entry] = []

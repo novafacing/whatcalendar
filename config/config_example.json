@@ -11,8 +11,8 @@
 					"YOUR_CALENDAR_ID2"
 				]
 			},
-			"blacklist": [
-				"some blacklist text"
+			"denylist": [
+				"some denylist text"
 			]
 		}
 	},

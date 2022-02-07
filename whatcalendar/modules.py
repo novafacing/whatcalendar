@@ -19,6 +19,7 @@ from whatcalendar.entry import Entry
 
 class EntryModule(metaclass=abc.ABCMeta):
     """Abstract class for modules that produce entries."""
+
     @abc.abstractmethod
     def refresh(self) -> List[Entry]:
         """Called when interval expires or to initialize the entry list."""
@@ -33,6 +34,7 @@ class EntryModule(metaclass=abc.ABCMeta):
 @dataclass
 class GoogleCalendarToken:
     """Dataclass for personal calendar token."""
+
     token: str
     refresh_token: str
     token_uri: str
@@ -45,6 +47,7 @@ class GoogleCalendarToken:
 @dataclass
 class GoogleCalendarProperties:
     """Metadata for calendar properties."""
+
     token_identifier: str
     token: GoogleCalendarToken
     creds: Credentials
@@ -56,6 +59,7 @@ class GoogleCalendarProperties:
 @dataclass
 class GoogleCalendarEvent:
     """Implements Gcloud Calendar API Events response."""
+
     kind: Optional[Any] = None
     etag: Optional[Any] = None
     id: Optional[str] = None
@@ -99,6 +103,7 @@ class GoogleCalendarEvent:
 
 class GoogleCalendarModule(EntryModule):
     """Adds entries from a Google Calendar"""
+
     def __init__(self) -> None:
         """Initialize the calendar constants and update flags."""
         self.scopes = ["https://www.googleapis.com/auth/calendar.readonly"]
@@ -112,7 +117,9 @@ class GoogleCalendarModule(EntryModule):
         for credential in self.credentials:
             service = build("calendar", "v3", credentials=credential.creds)
             for calendar_id in credential.calendar_ids:
-                today_midnight = (datetime.combine(date.today(), time())).isoformat() + "Z"
+                today_midnight = (
+                    datetime.combine(date.today(), time())
+                ).isoformat() + "Z"
                 events_result = (
                     service.events()
                     .list(
@@ -135,25 +142,35 @@ class GoogleCalendarModule(EntryModule):
                     event_end_time = datetime.fromisoformat(
                         gcal_event.end.get("dateTime", gcal_event.start.get("date"))
                     ).replace(tzinfo=self.timezone)
-                    for item in self.blacklist:
+                    for item in self.denylist:
                         if item in gcal_event.summary:
                             break
                     else:
                         now = datetime.now().replace(tzinfo=self.timezone)
-                        if event_time > now or (event_time <= now and event_end_time > now):
+                        if event_time > now or (
+                            event_time <= now and event_end_time > now
+                        ):
                             if event_time not in all_events:
                                 all_events[event_time] = []
                             all_events[event_time].append(
-                                Entry(todo=False, label=gcal_event.summary, time=event_time)
+                                Entry(
+                                    todo=False,
+                                    label=gcal_event.summary,
+                                    time=event_time,
+                                )
                             )
         self.data = all_events
-        if (datetime.now().replace(tzinfo=self.timezone) - self.last_token_refresh).total_seconds() > self.config["settings"]["token-refresh"]:
+        if (
+            datetime.now().replace(tzinfo=self.timezone) - self.last_token_refresh
+        ).total_seconds() > self.config["settings"]["token-refresh"]:
             for token_name, rel_tok_path in self.tokens.items():
                 token_path = Path(__file__).parents[1] / rel_tok_path
                 creds_path = Path(__file__).parents[1] / app_credentials_file
                 if token_path.exists():
-                    creds = Credentials.from_authorized_user_file("config/personal_token.json")
-                
+                    creds = Credentials.from_authorized_user_file(
+                        "config/personal_token.json"
+                    )
+
                     if creds is not None and creds.expired and creds.refresh_token:
                         creds.refresh(Request())
 
@@ -174,14 +191,16 @@ class GoogleCalendarModule(EntryModule):
         self.tokens = config["tokens"]
         app_credentials_file = config["credentials"]
         ids = config["ids"]
-        self.blacklist = config["blacklist"]
+        self.denylist = config["denylist"]
 
         for token_name, rel_tok_path in self.tokens.items():
             self.credentials.append(
                 GoogleCalendarProperties(
                     token_identifier=token_name,
                     token=GoogleCalendarToken(
-                        **loads((Path(__file__).parents[1] / rel_tok_path).open("r").read())
+                        **loads(
+                            (Path(__file__).parents[1] / rel_tok_path).open("r").read()
+                        )
                     ),
                     creds=Credentials.from_authorized_user_file(
                         Path(__file__).parents[1] / rel_tok_path
