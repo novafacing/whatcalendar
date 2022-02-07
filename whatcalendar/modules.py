@@ -1,4 +1,5 @@
 import abc
+from calendar import calendar
 from dataclasses import dataclass
 from datetime import datetime, timedelta, date, time
 from json import loads
@@ -8,11 +9,8 @@ from typing import Any, Dict, List, Optional
 
 import pytz
 from pytz import timezone
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
 from sortedcontainers import SortedDict
+from gcsa import GoogleCalendar
 
 from whatcalendar.entry import Entry
 
@@ -31,148 +29,36 @@ class EntryModule(metaclass=abc.ABCMeta):
         raise NotImplementedError
 
 
-@dataclass
-class GoogleCalendarToken:
-    """Dataclass for personal calendar token."""
-
-    token: str
-    refresh_token: str
-    token_uri: str
-    client_id: str
-    client_secret: str
-    scopes: List[str]
-    expiry: str
-
-
-@dataclass
-class GoogleCalendarProperties:
-    """Metadata for calendar properties."""
-
-    token_identifier: str
-    token: GoogleCalendarToken
-    creds: Credentials
-    token_file: Path
-    flow: InstalledAppFlow
-    calendar_ids: List[str]
-
-
-@dataclass
-class GoogleCalendarEvent:
-    """Implements Gcloud Calendar API Events response."""
-
-    kind: Optional[Any] = None
-    etag: Optional[Any] = None
-    id: Optional[str] = None
-    status: Optional[str] = None
-    htmlLink: Optional[str] = None
-    created: Optional[datetime] = None
-    updated: Optional[datetime] = None
-    summary: Optional[str] = None
-    description: Optional[str] = None
-    location: Optional[str] = None
-    colorId: Optional[str] = None
-    creator: Optional[Dict] = None
-    organizer: Optional[Dict] = None
-    start: Optional[Dict] = None
-    end: Optional[Dict] = None
-    endTimeUnspecified: Optional[bool] = None
-    recurrence: Optional[List] = None
-    recurringEventId: Optional[str] = None
-    originalStartTime: Optional[Dict] = None
-    transparency: Optional[str] = None
-    visibility: Optional[str] = None
-    iCalUID: Optional[str] = None
-    sequence: Optional[Any] = None
-    attendees: Optional[List] = None
-    attendeesOmitted: Optional[bool] = None
-    extendedProperties: Optional[Dict] = None
-    hangoutLink: Optional[str] = None
-    conferenceData: Optional[Dict] = None
-    gadget: Optional[Dict] = None
-    anyoneCanAddSelf: Optional[bool] = None
-    guestsCanInviteOthers: Optional[bool] = None
-    guestsCanModify: Optional[bool] = None
-    guestsCanSeeOtherGuests: Optional[bool] = None
-    privateCopy: Optional[bool] = None
-    locked: Optional[bool] = None
-    reminders: Optional[Dict] = None
-    source: Optional[Dict] = None
-    attachments: Optional[List] = None
-    eventType: Optional[str] = None
-
-
-class GoogleCalendarModule(EntryModule):
+class SimpleGoogleCalendarModule(EntryModule):
     """Adds entries from a Google Calendar"""
 
     def __init__(self) -> None:
-        """Initialize the calendar constants and update flags."""
-        self.scopes = ["https://www.googleapis.com/auth/calendar.readonly"]
+        """Initialize the calendar and update flags"""
         self.interval = 180  # Once every other minute is more than enough
         self.last = datetime.now()
         self.data: Optional[SortedDict] = None
 
     def refresh(self) -> None:
-        """Refresh the list of upcoming events."""
+        """Refresh the calendar data."""
         all_events = SortedDict()
-        for credential in self.credentials:
-            service = build("calendar", "v3", credentials=credential.creds)
-            for calendar_id in credential.calendar_ids:
-                today_midnight = (
-                    datetime.combine(date.today(), time())
-                ).isoformat() + "Z"
-                events_result = (
-                    service.events()
-                    .list(
-                        calendarId=calendar_id,
-                        timeMin=today_midnight,
-                        maxResults=24,
-                        singleEvents=True,
-                        orderBy="startTime",
+        for event in self.calendar.get_events(single_events=True):
+            event_time = datetime.fromisoformat(event.start).replace(
+                tzinfo=self.timezone
+            )
+            event_end_time = datetime.fromisoformat(event.end).replace(
+                tzinfo=self.timezone
+            )
+            for item in self.denylist:
+                if item in event.summary:
+                    break
+            else:
+                now = datetime.now().replace(tzinfo=self.timezone)
+                if event_time > now or (event_time <= now and event_end_time > now):
+                    if event_time not in all_events:
+                        all_events[event_time] = []
+                    all_events[event_time].append(
+                        Entry(todo=False, label=event.summary, time=event_time)
                     )
-                    .execute()
-                )
-
-                events = events_result.get("items", [])
-
-                for event in events:
-                    gcal_event = GoogleCalendarEvent(**event)
-                    event_time = datetime.fromisoformat(
-                        gcal_event.start.get("dateTime", gcal_event.start.get("date"))
-                    ).replace(tzinfo=self.timezone)
-                    event_end_time = datetime.fromisoformat(
-                        gcal_event.end.get("dateTime", gcal_event.start.get("date"))
-                    ).replace(tzinfo=self.timezone)
-                    for item in self.denylist:
-                        if item in gcal_event.summary:
-                            break
-                    else:
-                        now = datetime.now().replace(tzinfo=self.timezone)
-                        if event_time > now or (
-                            event_time <= now and event_end_time > now
-                        ):
-                            if event_time not in all_events:
-                                all_events[event_time] = []
-                            all_events[event_time].append(
-                                Entry(
-                                    todo=False,
-                                    label=gcal_event.summary,
-                                    time=event_time,
-                                )
-                            )
-        self.data = all_events
-        if (
-            datetime.now().replace(tzinfo=self.timezone) - self.last_token_refresh
-        ).total_seconds() > self.config["settings"]["token-refresh"]:
-            for token_name, rel_tok_path in self.tokens.items():
-                token_path = Path(__file__).parents[1] / rel_tok_path
-                creds_path = Path(__file__).parents[1] / app_credentials_file
-                if token_path.exists():
-                    creds = Credentials.from_authorized_user_file(
-                        "config/personal_token.json"
-                    )
-
-                    if creds is not None and creds.expired and creds.refresh_token:
-                        creds.refresh(Request())
 
     def setup(self, config: Dict) -> None:
         """
@@ -181,34 +67,13 @@ class GoogleCalendarModule(EntryModule):
         :param config: Configuration dictionary
         """
         self.config = config
-        self.credentials: List[GoogleCalendarProperties] = []
-        if "modules" not in config or "calendar" not in config["modules"]:
-            raise AssertionError("No 'calendar' section in config!")
-
-        self.timezone = timezone(config["settings"]["time-zone"])
-        self.last_token_refresh = datetime.now().replace(tzinfo=self.timezone)
-        config = config["modules"]["calendar"]
-        self.tokens = config["tokens"]
-        app_credentials_file = config["credentials"]
-        ids = config["ids"]
-        self.denylist = config["denylist"]
-
-        for token_name, rel_tok_path in self.tokens.items():
-            self.credentials.append(
-                GoogleCalendarProperties(
-                    token_identifier=token_name,
-                    token=GoogleCalendarToken(
-                        **loads(
-                            (Path(__file__).parents[1] / rel_tok_path).open("r").read()
-                        )
-                    ),
-                    creds=Credentials.from_authorized_user_file(
-                        Path(__file__).parents[1] / rel_tok_path
-                    ),
-                    token_file=(Path(__file__).parents[1] / rel_tok_path).resolve(),
-                    flow=InstalledAppFlow.from_client_secrets_file(
-                        Path(__file__).parents[1] / app_credentials_file, self.scopes
-                    ),
-                    calendar_ids=ids[token_name],
-                )
-            )
+        calendar_config = self.config.get("modules").get("calendar")
+        self.timezone = timezone(self.config["settings"]["time-zone"])
+        self.credentials_path = Path(__file__).parents[1] / calendar_config.get(
+            "credentials"
+        )
+        self.token_path = self.credentials_path.parent / "token.pickle"
+        self.denylist = calendar_config.get("denylist")
+        self.calendar = GoogleCalendar(
+            credentials_path=self.credentials_path, token_path=self.token_path
+        )
